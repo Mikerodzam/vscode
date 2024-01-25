@@ -236,6 +236,12 @@ export interface IStoredFileWorkingCopySaveOptions extends ISaveOptions {
 	readonly ignoreErrorHandler?: boolean;
 }
 
+export interface IStoredFileWorkingCopySaveAsOptions extends IStoredFileWorkingCopySaveOptions {
+
+	readonly sourceResource?: URI;
+}
+
+
 export interface IStoredFileWorkingCopyResolver {
 
 	/**
@@ -815,7 +821,7 @@ export class StoredFileWorkingCopy<M extends IStoredFileWorkingCopyModel> extend
 
 	private ignoreSaveFromSaveParticipants = false;
 
-	async save(options: IStoredFileWorkingCopySaveOptions = Object.create(null)): Promise<boolean> {
+	async save(options: IStoredFileWorkingCopySaveAsOptions = Object.create(null)): Promise<boolean> {
 		if (!this.isResolved()) {
 			return false;
 		}
@@ -843,7 +849,7 @@ export class StoredFileWorkingCopy<M extends IStoredFileWorkingCopyModel> extend
 		return this.hasState(StoredFileWorkingCopyState.SAVED);
 	}
 
-	private async doSave(options: IStoredFileWorkingCopySaveOptions): Promise<void> {
+	private async doSave(options: IStoredFileWorkingCopySaveAsOptions): Promise<void> {
 		if (typeof options.reason !== 'number') {
 			options.reason = SaveReason.EXPLICIT;
 		}
@@ -947,7 +953,7 @@ export class StoredFileWorkingCopy<M extends IStoredFileWorkingCopyModel> extend
 					if (!saveCancellation.token.isCancellationRequested) {
 						this.ignoreSaveFromSaveParticipants = true;
 						try {
-							await this.workingCopyFileService.runSaveParticipants(this, { reason: options.reason ?? SaveReason.EXPLICIT }, saveCancellation.token);
+							await this.workingCopyFileService.runSaveParticipants(this, { reason: options.reason ?? SaveReason.EXPLICIT, source: options.sourceResource }, saveCancellation.token);
 						} finally {
 							this.ignoreSaveFromSaveParticipants = false;
 						}
@@ -1039,7 +1045,7 @@ export class StoredFileWorkingCopy<M extends IStoredFileWorkingCopyModel> extend
 		})(), () => saveCancellation.cancel());
 	}
 
-	private handleSaveSuccess(stat: IFileStatWithMetadata, versionId: number, options: IStoredFileWorkingCopySaveOptions): void {
+	private handleSaveSuccess(stat: IFileStatWithMetadata, versionId: number, options: IStoredFileWorkingCopySaveAsOptions): void {
 
 		// Updated resolved stat with updated stat
 		this.updateLastResolvedFileStat(stat);
@@ -1059,7 +1065,7 @@ export class StoredFileWorkingCopy<M extends IStoredFileWorkingCopyModel> extend
 		this._onDidSave.fire({ reason: options.reason, stat, source: options.source });
 	}
 
-	private handleSaveError(error: Error, versionId: number, options: IStoredFileWorkingCopySaveOptions): void {
+	private handleSaveError(error: Error, versionId: number, options: IStoredFileWorkingCopySaveAsOptions): void {
 		(options.ignoreErrorHandler ? this.logService.trace : this.logService.error).apply(this.logService, [`[stored file working copy] handleSaveError(${versionId}) - exit - resulted in a save error: ${error.toString()}`, this.resource.toString(), this.typeId]);
 
 		// Return early if the save() call was made asking to
